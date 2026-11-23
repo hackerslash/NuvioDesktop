@@ -24,6 +24,7 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
         run: |
           brew install mpv
+          echo "$(brew --prefix ffmpeg)/bin" >> "$GITHUB_PATH"
           mpv --version
           mpv --version | grep -F 'mpv v0.42.'
           python3 scripts/macos/stage-homebrew-mpv.py "$RUNNER_TEMP/libmpv"

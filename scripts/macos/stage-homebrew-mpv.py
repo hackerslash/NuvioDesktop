@@ -10,6 +10,25 @@ def run(*args):
     return subprocess.check_output(args, text=True)
 
 
+def resolve_dependency(source, dependency):
+    if dependency.startswith("@rpath/"):
+        name = dependency.removeprefix("@rpath/")
+        candidates = [source.resolve().parent / name]
+        load_commands = run("otool", "-l", source).splitlines()
+        for index, line in enumerate(load_commands):
+            if line.strip() == "cmd LC_RPATH":
+                path = load_commands[index + 2].strip().removeprefix("path ").split(" (offset ", 1)[0]
+                path = path.replace("@loader_path", str(source.resolve().parent), 1)
+                candidates.append(Path(path) / name)
+        candidates.append(Path(run("brew", "--prefix").strip()) / "lib" / name)
+    else:
+        candidates = [Path(dependency.replace("@loader_path/", f"{source.resolve().parent}/", 1))]
+    for path in candidates:
+        if path.is_absolute() and path.is_file():
+            return path
+    raise ValueError(f"Cannot resolve {dependency} from {source}")
+
+
 def stage_library(source, name, destination, staged):
     if name in staged:
         if staged[name] != source.resolve():
@@ -26,9 +45,7 @@ def stage_library(source, name, destination, staged):
         dependency = line.strip().split(" (compatibility version", 1)[0]
         if dependency == identity or dependency.startswith(("/usr/lib/", "/System/Library/")):
             continue
-        path = Path(dependency.replace("@loader_path/", f"{source.resolve().parent}/", 1))
-        if not path.is_absolute() or not path.is_file():
-            raise ValueError(f"Cannot resolve {dependency} from {source}")
+        path = resolve_dependency(source, dependency)
         stage_library(path, path.name, destination, staged)
         changes.extend(("-change", dependency, f"@loader_path/{path.name}"))
 
