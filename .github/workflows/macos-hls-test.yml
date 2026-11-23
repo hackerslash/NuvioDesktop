@@ -33,7 +33,7 @@ jobs:
 
       - name: Build unsigned Apple Silicon DMG
         run: |
-          touch local.properties
+          cp scripts/macos/playback-test.properties local.properties
           ./gradlew :composeApp:packageReleaseDmg \
             -Pnuvio.macos.arch=arm64 \
             "-Pnuvio.macos.libmpv.runtimeDir=$RUNNER_TEMP/libmpv" \
