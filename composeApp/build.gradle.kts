@@ -612,7 +612,9 @@ val isMacosDmgNotarizationRequested = requestedGradleTasks.any { taskName ->
     taskName == "notarizedmg" || taskName == "notarizereleasedmg"
 }
 val bundledMacosLibmpvRuntimeRoot = layout.projectDirectory.dir("src/desktopMain/native/macos/runtime").asFile
-val bundledMacosLibmpvRuntimeDir = File(bundledMacosLibmpvRuntimeRoot, macosPlayerBridgeArch)
+val bundledMacosLibmpvRuntimeDir = providers.gradleProperty("nuvio.macos.libmpv.runtimeDir").orNull
+    ?.let(rootProject::file)
+    ?: File(bundledMacosLibmpvRuntimeRoot, macosPlayerBridgeArch)
 val bundledMacosLibmpvDylib = File(bundledMacosLibmpvRuntimeDir, "libmpv.2.dylib")
 val missingMacosPlayerBridgeInputs = listOfNotNull(
     "libmpv headers".takeUnless { macosLibmpvHeaders.file("mpv/client.h").asFile.exists() },

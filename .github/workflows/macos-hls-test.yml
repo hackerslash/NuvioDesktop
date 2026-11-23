@@ -1,0 +1,45 @@
+name: macOS HLS test build
+
+on:
+  push:
+    branches: [macos-hls-seek]
+
+permissions:
+  contents: read
+
+jobs:
+  arm64:
+    if: github.repository == 'hackerslash/NuvioDesktop'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Stage updated playback runtime
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          brew install mpv
+          mpv --version
+          mpv --version | grep -F 'mpv v0.42.'
+          python3 scripts/macos/stage-homebrew-mpv.py "$RUNNER_TEMP/libmpv"
+          python3 -c 'import ctypes, sys; ctypes.CDLL(sys.argv[1])' "$RUNNER_TEMP/libmpv/libmpv.2.dylib"
+
+      - name: Build unsigned Apple Silicon DMG
+        run: |
+          git lfs pull --include='composeApp/src/desktopMain/native/macos/engine/**' --exclude=''
+          ./gradlew :composeApp:packageReleaseDmg \
+            -Pnuvio.macos.arch=arm64 \
+            "-Pnuvio.macos.libmpv.runtimeDir=$RUNNER_TEMP/libmpv" \
+            -Pcompose.desktop.packaging.checkJdkVendor=false \
+            --no-configuration-cache --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Nuvio-macOS-arm64-HLS-test
+          path: composeApp/build/compose/release-dmgs/*.dmg
+          if-no-files-found: error
