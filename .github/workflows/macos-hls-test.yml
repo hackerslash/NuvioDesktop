@@ -27,11 +27,11 @@ jobs:
           mpv --version
           mpv --version | grep -F 'mpv v0.42.'
           python3 scripts/macos/stage-homebrew-mpv.py "$RUNNER_TEMP/libmpv"
-          python3 -c 'import ctypes, sys; ctypes.CDLL(sys.argv[1])' "$RUNNER_TEMP/libmpv/libmpv.2.dylib"
+      - name: Test fMP4 HLS playback, seek, and resume
+        run: python3 scripts/macos/check-hls-seek.py "$RUNNER_TEMP/libmpv/libmpv.2.dylib"
 
       - name: Build unsigned Apple Silicon DMG
         run: |
-          git lfs pull --include='composeApp/src/desktopMain/native/macos/engine/**' --exclude=''
           ./gradlew :composeApp:packageReleaseDmg \
             -Pnuvio.macos.arch=arm64 \
             "-Pnuvio.macos.libmpv.runtimeDir=$RUNNER_TEMP/libmpv" \
